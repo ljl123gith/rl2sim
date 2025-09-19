@@ -1,0 +1,115 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Machine Learning / AI specific
+*.pkl
+*.pickle
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.onnx
+*.pb
+*.tflite
+*.model
+*.weights
+*.joblib
+
+# Logs and outputs
+logs/
+outputs/
+runs/
+experiments/
+checkpoints/
+wandb/
+tensorboard/
+mlruns/
+
+# Large files and archives
+*.zip
+*.tar.gz
+*.tar.bz2
+*.7z
+*.rar
+
+# Isaac Gym - exclude large assets and binaries
+isaacgym/python/isaacgym/_bindings/
+isaacgym/docs/
+isaacgym/assets/
+isaacgym/deploy_mujoco/
+
+# Large mesh and asset files
+*.stl
+*.STL
+*.obj
+*.OBJ
+*.dae
+*.mtl
+
+# Image files (keep only essential ones)
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.tiff
+
+# Submodules/embedded git repos
+isaacgym/amp_for_hardware/AMP_for_hardware/
+sim2real/RoboTamerSdk4Qmini/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
