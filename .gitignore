@@ -73,6 +73,19 @@ isaacgym/docs/
 isaacgym/assets/
 isaacgym/deploy_mujoco/
 
+# Allow important robot files including meshes
+!isaacgym/resources/
+!isaacgym/resources/robots/
+!isaacgym/resources/robots/**/*.urdf
+!isaacgym/resources/robots/**/*.xml
+!isaacgym/resources/robots/**/*.csv
+!isaacgym/resources/robots/**/*.stl
+!isaacgym/resources/robots/**/*.STL
+!isaacgym/resources/robots/**/*.obj
+!isaacgym/resources/robots/**/*.OBJ
+!isaacgym/resources/robots/**/*.dae
+!isaacgym/resources/robots/**/*.mtl
+
 # Large mesh and asset files
 *.stl
 *.STL
