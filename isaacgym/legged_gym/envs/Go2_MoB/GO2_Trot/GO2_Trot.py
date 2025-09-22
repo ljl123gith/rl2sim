@@ -588,6 +588,37 @@ class GO2_Trot_Robot(LeggedRobot):
 
         # create some wrapper tensors for different slices
         self.root_states = gymtorch.wrap_tensor(actor_root_state) 
+        # # 添加验证代码
+        # print("=== Root States 格式验证 ===")
+        # print(f"root_states shape: {self.root_states.shape}")
+        # print(f"root_states dtype: {self.root_states.dtype}")
+        # print(f"root_states device: {self.root_states.device}")
+        
+        # # 打印第一个环境的所有13个维度
+        # print("\n第一个环境的root_states[0, 0:13]:")
+        # print(f"位置 [0:3]:   {self.root_states[0, 0:3].cpu().numpy()}")
+        # print(f"四元数[3:7]:  {self.root_states[0, 3:7].cpu().numpy()}")
+        # print(f"线速度[7:10]: {self.root_states[0, 7:10].cpu().numpy()}")
+        # print(f"角速度[10:13]:{self.root_states[0, 10:13].cpu().numpy()}")
+        
+        # # 验证四元数是否归一化
+        # quat = self.root_states[0, 3:7]
+        # quat_norm = torch.norm(quat)
+        # print(f"\n四元数归一化检查: ||quat|| = {quat_norm:.6f}")
+        
+        # # 验证位置是否合理（应该在初始位置附近）
+        # pos = self.root_states[0, 0:3]
+        # print(f"位置合理性检查: x={pos[0]:.3f}, y={pos[1]:.3f}, z={pos[2]:.3f}")
+        
+        # # 验证速度是否为零（初始状态）
+        # lin_vel = self.root_states[0, 7:10]
+        # ang_vel = self.root_states[0, 10:13]
+        # print(f"线速度检查: ||lin_vel|| = {torch.norm(lin_vel):.6f}")
+        # print(f"角速度检查: ||ang_vel|| = {torch.norm(ang_vel):.6f}")
+        
+        # print("=" * 50)
+
+
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
@@ -760,6 +791,14 @@ class GO2_Trot_Robot(LeggedRobot):
         self.num_dofs = len(self.dof_names)
         feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
         print(feet_names)
+        print("===create_envs  ===")
+        print(f"All body names: {body_names}")
+        print(f"All dof names: {self.dof_names}")
+        print(f"Filtered feet names: {feet_names}")
+        print(f"URDF file path: {self.cfg.asset.file}")
+        print("========================")
+
+
         penalized_contact_names = []
         for name in self.cfg.asset.penalize_contacts_on:
             penalized_contact_names.extend([s for s in body_names if name in s])
@@ -880,7 +919,12 @@ class GO2_Trot_Robot(LeggedRobot):
         on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
         """
         joint_diff = torch.abs(self.dof_pos[:,0])+torch.abs(self.dof_pos[:,3])+torch.abs(self.dof_pos[:,6])+torch.abs(self.dof_pos[:,9])
-        # print("!!!!!1",torch.exp(-joint_diff * 4).shape)
+        # # print("!!!!!1",torch.exp(-joint_diff * 4).shape)
+        # print("========================")
+        # print(f"reward_default_hip_pos ")
+        # print(f"self.dof_pos: {self.dof_pos}")  
+        # print(f"joint_diff: {joint_diff}")
+
         return joint_diff  
 
     def _reward_feet_clearance(self):#鼓励抬脚高度
@@ -904,6 +948,11 @@ class GO2_Trot_Robot(LeggedRobot):
         return rew*(torch.norm(self.commands[:, :2], dim=1) > 0.2)
     
     def _reward_lin_vel_z(self):
+
+        print("========lin_vel_z================")
+        print(f"self.base_lin_vel: {self.base_lin_vel}")
+        print(f"torch.abs(self.base_lin_vel[:, 2]): {torch.abs(self.base_lin_vel[:, 2])}")
+
         return torch.exp(-torch.abs(self.base_lin_vel[:, 2])*5)
     
     def _reward_ang_vel_xy(self):
@@ -911,6 +960,7 @@ class GO2_Trot_Robot(LeggedRobot):
         return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
     
     def _reward_orientation(self):
+     
 
         return torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1)*10)
 

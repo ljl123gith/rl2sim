@@ -169,7 +169,7 @@ class V1RobotFlat1(LeggedRobot):
         self.last_actions[env_ids] = 0.
         self.last_dof_vel[env_ids] = 0.
         self.feet_air_time[env_ids] = 0.
-        self.episode_length_buf[env_ids] = 0
+        self.episode_length_buf[env_ids] = 0   #形状是一个一维的张量 （num_envs, 1）
         self.reset_buf[env_ids] = 1
         self._reset_latency_buffer(env_ids)
         # fill extras
@@ -217,7 +217,7 @@ class V1RobotFlat1(LeggedRobot):
             self.episode_sums["termination"] += rew
     
     def _get_phase(self):
-        cycle_time = self.cfg.rewards.cycle_time
+        cycle_time = self.cfg.rewards.cycle_time #0.5
         phase = (self.episode_length_buf * self.dt)%cycle_time/cycle_time
         return phase
 
@@ -513,6 +513,13 @@ class V1RobotFlat1(LeggedRobot):
     
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
+
+        Args:
+    
+         torch_rand_float()：随机浮点数生成函数
+         gymtorch.unwrap_tensor()：将PyTorch张量转换为Gym可用的张量格式
+
+         为所有机器人生成随机的线速度（X和Y方向），模拟外界推力的效果
         """
         max_vel = self.cfg.domain_rand.max_push_vel_xy
         max_push_angular = self.cfg.domain_rand.max_push_ang_vel
@@ -589,6 +596,39 @@ class V1RobotFlat1(LeggedRobot):
 
         # create some wrapper tensors for different slices
         self.root_states = gymtorch.wrap_tensor(actor_root_state)
+        # # 添加验证代码
+        # print("=== Root States 格式验证 ===")
+        # print(f"root_states shape: {self.root_states.shape}")
+        # print(f"root_states dtype: {self.root_states.dtype}")
+        # print(f"root_states device: {self.root_states.device}")
+        
+        # # 打印第一个环境的所有13个维度
+        # print("\n第一个环境的root_states[0, 0:13]:")
+        # print(f"位置 [0:3]:   {self.root_states[0, 0:3].cpu().numpy()}")
+        # print(f"四元数[3:7]:  {self.root_states[0, 3:7].cpu().numpy()}")
+        # print(f"线速度[7:10]: {self.root_states[0, 7:10].cpu().numpy()}")
+        # print(f"角速度[10:13]:{self.root_states[0, 10:13].cpu().numpy()}")
+        
+        # # 验证四元数是否归一化
+        # quat = self.root_states[0, 3:7]
+        # quat_norm = torch.norm(quat)
+        # print(f"\n四元数归一化检查: ||quat|| = {quat_norm:.6f}")
+        
+        # # 验证位置是否合理（应该在初始位置附近）
+        # pos = self.root_states[0, 0:3]
+        # print(f"位置合理性检查: x={pos[0]:.3f}, y={pos[1]:.3f}, z={pos[2]:.3f}")
+        
+        # # 验证速度是否为零（初始状态）
+        # lin_vel = self.root_states[0, 7:10]
+        # ang_vel = self.root_states[0, 10:13]
+        # print(f"线速度检查: ||lin_vel|| = {torch.norm(lin_vel):.6f}")
+        # print(f"角速度检查: ||ang_vel|| = {torch.norm(ang_vel):.6f}")
+        
+        # print("=" * 50)
+
+
+
+
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
@@ -762,6 +802,7 @@ class V1RobotFlat1(LeggedRobot):
         feet_names = [s for s in body_names if self.cfg.asset.foot_name in s]
         print("=== FOOT ORDER DEBUG ===")
         print(f"All body names: {body_names}")
+        print(f"All dof names: {self.dof_names}")
         print(f"Filtered feet names: {feet_names}")
         print(f"URDF file path: {self.cfg.asset.file}")
         print("========================")
@@ -938,7 +979,7 @@ class V1RobotFlat1(LeggedRobot):
         Rewards or penalizes depending on whether the foot contact matches the expected gait phase.
         For trot gait: FL+RR should be in sync, FR+RL should be in sync, and the two pairs should be opposite.
         """
-        contact = self.contact_forces[:, self.feet_indices, 2] > 5.
+        contact = self.contact_forces[:, self.feet_indices, 2] > 2.
 
         stance_mask = self._get_gait_phase()
         
@@ -960,17 +1001,17 @@ class V1RobotFlat1(LeggedRobot):
             self.debug_trot_counter = 0
             
         # Print debug info every 100 steps for environment 0
-        if self.debug_trot_counter % 100 == 0:
-            print(f"=== TROT Debug Info (Step {self.debug_trot_counter}) ===")
-            print(f"Contact: {contact[0]}")
-            print(f"Stance_mask: {stance_mask[0]}")
-            print(f"Diagonal1_sync: {diagonal1_sync[0]}, Diagonal2_sync: {diagonal2_sync[0]}")
-            print(f"Phase_match1: {diagonal1_phase_match[0]}, Phase_match2: {diagonal2_phase_match[0]}")
-            print(f"TROT result: {TROT[0]}")
-            print(f"Command norm: {torch.norm(self.commands[0, :2])}")
-            print(f"Command > 0.2: {torch.norm(self.commands[0, :2]) > 0.2}")
-            print(f"Phase: {self._get_phase()[0]}")
-            print("=" * 50)
+        # if self.debug_trot_counter % 100 == 0:
+        #     print(f"=== TROT Debug Info (Step {self.debug_trot_counter}) ===")
+        #     print(f"Contact: {contact[0]}")
+        #     print(f"Stance_mask: {stance_mask[0]}")
+        #     print(f"Diagonal1_sync: {diagonal1_sync[0]}, Diagonal2_sync: {diagonal2_sync[0]}")
+        #     print(f"Phase_match1: {diagonal1_phase_match[0]}, Phase_match2: {diagonal2_phase_match[0]}")
+        #     print(f"TROT result: {TROT[0]}")
+        #     print(f"Command norm: {torch.norm(self.commands[0, :2])}")
+        #     print(f"Command > 0.2: {torch.norm(self.commands[0, :2]) > 0.2}")
+        #     print(f"Phase: {self._get_phase()[0]}")
+        #     print("=" * 50)
         
         self.trot = TROT.to(torch.float32).mean()
         speed_condition = (torch.norm(self.commands[:, :2], dim=1) > 0.2)
@@ -984,7 +1025,10 @@ class V1RobotFlat1(LeggedRobot):
         on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
         """
         joint_diff = torch.abs(self.dof_pos[:,0])+torch.abs(self.dof_pos[:,3])+torch.abs(self.dof_pos[:,6])+torch.abs(self.dof_pos[:,9])
-        
+        # print("========================")
+        # print(f"reward_default_hip_pos ")
+        # print(f"self.dof_pos: {self.dof_pos}")  
+        # print(f"joint_diff: {joint_diff}")
         return joint_diff
 
     # def _reward_feet_clearance(self):#鼓励抬脚高度
@@ -1044,6 +1088,11 @@ class V1RobotFlat1(LeggedRobot):
     
     
     def _reward_lin_vel_z(self):
+
+        # print("========lin_vel_z================")
+        # print(f"self.base_lin_vel: {self.base_lin_vel}")
+        # print(f"torch.abs(self.base_lin_vel[:, 2]): {torch.abs(self.base_lin_vel[:, 2])}")
+
         return torch.exp(-torch.abs(self.base_lin_vel[:, 2])*5)
     
     def _reward_ang_vel_xy(self):
@@ -1051,12 +1100,22 @@ class V1RobotFlat1(LeggedRobot):
         return torch.sum(torch.square(self.base_ang_vel[:, :2]), dim=1)
     
     def _reward_orientation(self):
+        # print("========================")
+        # print(f"reward_orientation ")
+        # print(f"self.projected_gravity: {self.projected_gravity}")
+        # print(f"torch.norm(self.projected_gravity[:, :2], dim=1): {torch.norm(self.projected_gravity[:, :2], dim=1)}")
+
 
         return torch.exp(-torch.norm(self.projected_gravity[:, :2], dim=1)*10)
 
     def _reward_base_height(self):
         # Penalize base height away from target
         base_height = torch.mean(self.root_states[:, 2].unsqueeze(1) , dim=1)
+        # print("========================")
+        # print(f"reward_base_height ")
+        # print(f"base_height: {base_height}")
+        # print(f"self.cfg.rewards.base_height_target: {self.cfg.rewards.base_height_target}")
+
         return torch.exp(-torch.abs(base_height - self.cfg.rewards.base_height_target)*10)
     
     def _reward_torques(self):
@@ -1073,6 +1132,11 @@ class V1RobotFlat1(LeggedRobot):
     
     def _reward_action_rate(self):
         # Penalize changes in actions
+        # print("========================")
+        # print(f"reward_action_rate ")
+        # print(f"self.last_actions: {self.last_actions}")
+        # print(f"self.actions: {self.actions}")
+      
         return torch.sum(torch.square(self.last_actions - self.actions), dim=1)
     def _reward_collision(self):
         # Penalize collisions on selected bodies
@@ -1089,13 +1153,23 @@ class V1RobotFlat1(LeggedRobot):
 
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (xy axes)
+
+        # print("========tracking_lin_vel================")
+        # print(f"self.commands[:, :2]: {self.commands[:, :2]}")
+        # print(f"self.base_lin_vel[:, :2]: {self.base_lin_vel[:, :2]}")
+        # print(f"torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]): {torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2])}")
+        # print(f"torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1): {torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)}")
+        # print(f"torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma): {torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)}")
+        # print(f"self.trot: {self.trot}")
         lin_vel_error = torch.sum(torch.square(self.commands[:, :2] - self.base_lin_vel[:, :2]), dim=1)
-        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)*(self.trot>0.78)
+        mask = (self.trot > 0.78).float()
+        return torch.exp(-lin_vel_error/self.cfg.rewards.tracking_sigma)* (0.2 + 0.8*mask)
     
     def _reward_tracking_ang_vel(self):
         # Tracking of angular velocity commands (yaw) 
         ang_vel_error = torch.square(self.commands[:, 2] - self.base_ang_vel[:, 2])
-        return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)*(self.trot>0.78)
+        mask = (self.trot > 0.78).float()
+        return torch.exp(-ang_vel_error/self.cfg.rewards.tracking_sigma)* (0.2 + 0.8*mask)
 
     def _reward_stand_still(self):
         # Penalize motion at zero commands
